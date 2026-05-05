@@ -1,0 +1,14 @@
+[package]
+name = "lazyage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ratatui = "0.26.1"
+crossterm = "0.27.0"
+age = { version = "0.10.0", features = ["armor", "ssh"] }
+directories = "5.0.1"
+walkdir = "2.4.0"
+anyhow = "1.0.75"
+unicode-width = "0.1.11"
+chrono = "0.4.31"
