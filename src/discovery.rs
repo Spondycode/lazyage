@@ -52,6 +52,19 @@ pub fn discover_keys() -> Vec<KeyInfo> {
                 }
             }
         }
+
+        // Check ~/.config/age/
+        let age_config_dir = base_dirs.home_dir().join(".config").join("age");
+        if age_config_dir.exists() {
+            for entry in WalkDir::new(age_config_dir).max_depth(2).into_iter().flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(key) = try_load_key(path) {
+                        keys.push(key);
+                    }
+                }
+            }
+        }
     }
 
     keys
