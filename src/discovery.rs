@@ -39,11 +39,15 @@ pub fn discover_keys() -> Vec<KeyInfo> {
         }
     }
 
-    // Check ~/.ssh
-    if let Some(base_dirs) = BaseDirs::new() {
-        let ssh_dir = base_dirs.home_dir().join(".ssh");
+    let home_dir = BaseDirs::new()
+        .map(|bd| bd.home_dir().to_path_buf())
+        .or_else(|| std::env::var("HOME").ok().map(PathBuf::from));
+
+    if let Some(home) = home_dir {
+        // Check ~/.ssh
+        let ssh_dir = home.join(".ssh");
         if ssh_dir.exists() {
-            for entry in WalkDir::new(ssh_dir).max_depth(1).into_iter().flatten() {
+            for entry in WalkDir::new(&ssh_dir).follow_links(true).max_depth(1).into_iter().flatten() {
                 let path = entry.path();
                 if path.is_file() {
                     if let Some(key) = try_load_key(path) {
@@ -54,13 +58,28 @@ pub fn discover_keys() -> Vec<KeyInfo> {
         }
 
         // Check ~/.config/age/
-        let age_config_dir = base_dirs.home_dir().join(".config").join("age");
+        let age_config_dir = home.join(".config").join("age");
         if age_config_dir.exists() {
-            for entry in WalkDir::new(age_config_dir).max_depth(2).into_iter().flatten() {
+            for entry in WalkDir::new(&age_config_dir).follow_links(true).max_depth(2).into_iter().flatten() {
                 let path = entry.path();
                 if path.is_file() {
                     if let Some(key) = try_load_key(path) {
                         keys.push(key);
+                    }
+                }
+            }
+        }
+
+        // Check platform-specific config dir (e.g. ~/Library/Application Support/age on macOS)
+        if let Some(base_dirs) = BaseDirs::new() {
+            let plat_config_dir = base_dirs.config_dir().join("age");
+            if plat_config_dir.exists() && plat_config_dir != age_config_dir {
+                for entry in WalkDir::new(&plat_config_dir).follow_links(true).max_depth(2).into_iter().flatten() {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Some(key) = try_load_key(path) {
+                            keys.push(key);
+                        }
                     }
                 }
             }
@@ -72,6 +91,7 @@ pub fn discover_keys() -> Vec<KeyInfo> {
 
 fn try_load_key(path: &std::path::Path) -> Option<KeyInfo> {
     let content = fs::read_to_string(path).ok()?;
+    let trimmed_content = content.trim();
     
     // Simple check if it looks like an age key
     if content.contains("AGE-SECRET-KEY-") {
@@ -88,16 +108,94 @@ fn try_load_key(path: &std::path::Path) -> Option<KeyInfo> {
         });
     }
 
-    // Check for SSH public keys
-    if content.starts_with("ssh-ed25519") || content.starts_with("ssh-rsa") {
+    // Check for native age public keys
+    if trimmed_content.starts_with("age1") {
          return Some(KeyInfo {
             name: path.file_name()?.to_string_lossy().to_string(),
             path: path.to_path_buf(),
             is_secret: false,
             is_passphrase_only: false,
-            public_key: Some(content.trim().to_string()),
+            public_key: Some(trimmed_content.to_string()),
+        });
+    }
+
+    // Check for SSH public keys
+    if trimmed_content.starts_with("ssh-ed25519") 
+        || trimmed_content.starts_with("ssh-rsa")
+        || trimmed_content.starts_with("ecdsa-sha2-")
+        || trimmed_content.starts_with("ssh-dss") 
+    {
+         return Some(KeyInfo {
+            name: path.file_name()?.to_string_lossy().to_string(),
+            path: path.to_path_buf(),
+            is_secret: false,
+            is_passphrase_only: false,
+            public_key: Some(trimmed_content.to_string()),
         });
     }
 
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_try_load_key() {
+        let test_dir = std::env::current_dir().unwrap().join("test_temp_keys");
+        fs::create_dir_all(&test_dir).unwrap();
+        
+        let secret_path = test_dir.join("secret.key");
+        fs::write(&secret_path, "# public key: age1v9l...\nAGE-SECRET-KEY-1...").unwrap();
+        
+        let key = try_load_key(&secret_path).unwrap();
+        assert_eq!(key.name, "secret.key");
+        assert!(key.is_secret);
+        assert_eq!(key.public_key, Some("age1v9l...".to_string()));
+
+        let public_path = test_dir.join("public.key");
+        fs::write(&public_path, "age1...").unwrap();
+        let key = try_load_key(&public_path).unwrap();
+        assert_eq!(key.name, "public.key");
+        assert!(!key.is_secret);
+        assert_eq!(key.public_key, Some("age1...".to_string()));
+
+        let ssh_path = test_dir.join("id_ed25519.pub");
+        fs::write(&ssh_path, "ssh-ed25519 AAA...").unwrap();
+        let key = try_load_key(&ssh_path).unwrap();
+        assert_eq!(key.name, "id_ed25519.pub");
+        assert!(!key.is_secret);
+        assert_eq!(key.public_key, Some("ssh-ed25519 AAA...".to_string()));
+        
+        fs::remove_dir_all(&test_dir).unwrap();
+    }
+
+    #[test]
+    fn test_discover_keys_basic() {
+        // We can't easily mock BaseDirs, but we can test the CWD part
+        let test_dir = std::env::current_dir().unwrap().join("test_cwd_keys");
+        fs::create_dir_all(&test_dir).unwrap();
+        
+        // Change to test_dir
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&test_dir).unwrap();
+
+        fs::write("cwd_secret.key", "AGE-SECRET-KEY-1...").unwrap();
+        fs::write("cwd_public.key", "age1...").unwrap();
+        fs::write("random.txt", "not a key").unwrap();
+
+        let keys = discover_keys();
+        
+        // Should find "None (Passphrase Only)" + 2 keys in CWD
+        // Plus whatever is in the user's real ~/.ssh and ~/.config/age (which we can't easily control here)
+        // So we just check if our keys are present
+        assert!(keys.iter().any(|k| k.name == "cwd_secret.key"));
+        assert!(keys.iter().any(|k| k.name == "cwd_public.key"));
+        assert!(!keys.iter().any(|k| k.name == "random.txt"));
+
+        std::env::set_current_dir(original_dir).unwrap();
+        fs::remove_dir_all(&test_dir).unwrap();
+    }
 }
