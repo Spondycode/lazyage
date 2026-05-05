@@ -30,7 +30,7 @@ Built with Rust and [Ratatui](https://ratatui.rs/), `lazyage` provides a seamles
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/lazyage.git
+git clone https://github.com/Spondycode/lazyage.git
 cd lazyage
 cargo build --release
 sudo cp target/release/lazyage /usr/local/bin/
