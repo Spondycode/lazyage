@@ -4,6 +4,43 @@ use std::path::{Path, PathBuf};
 use anyhow::{Result, anyhow};
 use age::{Encryptor, Decryptor, Recipient, Identity};
 use std::str::FromStr;
+use directories::BaseDirs;
+use chrono::Local;
+
+use secrecy::ExposeSecret;
+
+pub fn generate_new_key(filename: &str) -> Result<String> {
+    let identity = age::x25519::Identity::generate();
+    let pubkey = identity.to_public();
+    
+    let home_dir = BaseDirs::new()
+        .map(|bd| bd.home_dir().to_path_buf())
+        .or_else(|| std::env::var("HOME").ok().map(PathBuf::from))
+        .ok_or_else(|| anyhow!("Could not find home directory"))?;
+
+    let age_dir = home_dir.join(".config").join("age");
+    if !age_dir.exists() {
+        std::fs::create_dir_all(&age_dir)?;
+    }
+
+    let file_path = age_dir.join(format!("{}.key", filename));
+    if file_path.exists() {
+        return Err(anyhow!("File already exists: {}", file_path.display()));
+    }
+
+    let now = Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    let content = format!(
+        "# created: {}\n# public key: {}\n{}\n",
+        now,
+        pubkey,
+        identity.to_string().expose_secret()
+    );
+
+    let mut file = File::create(&file_path)?;
+    file.write_all(content.as_bytes())?;
+
+    Ok(file_path.to_string_lossy().to_string())
+}
 
 pub fn encrypt_with_key(input_path: &Path, recipient_key: &str) -> Result<String> {
     let mut input_file = File::open(input_path)?;

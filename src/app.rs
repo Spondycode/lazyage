@@ -5,6 +5,7 @@ pub enum InputMode {
     Normal,
     EnteringPassphrase(PassphraseAction),
     Deleting,
+    GeneratingKey,
 }
 
 #[derive(Clone, Copy)]

@@ -126,6 +126,7 @@ pub fn render(f: &mut Frame, app: &App) {
         Line::from(vec![Span::styled("Tab", Style::default().fg(Color::Cyan)), Span::raw(": Switch Panes"), Span::raw(" | "), Span::styled("R", Style::default().fg(Color::Cyan)), Span::raw(": Refresh")]),
         Line::from(vec![Span::styled("e", Style::default().fg(Color::Green)), Span::raw(": Encrypt"), Span::raw(" | "), Span::styled("d", Style::default().fg(Color::Red)), Span::raw(": Decrypt")]),
         Line::from(vec![Span::styled("p", Style::default().fg(Color::Green)), Span::raw(": Encrypt (Passphrase)"), Span::raw(" | "), Span::styled("x", Style::default().fg(Color::Red)), Span::raw(": Delete")]),
+        Line::from(vec![Span::styled("g", Style::default().fg(Color::Green)), Span::raw(": Generate Key")]),
     ];
 
     if let Some(key) = current_key {
@@ -143,6 +144,19 @@ pub fn render(f: &mut Frame, app: &App) {
         let input_block = Block::default()
             .borders(Borders::ALL)
             .title("Enter Passphrase")
+            .style(Style::default().bg(Color::DarkGray));
+        let input_para = Paragraph::new(app.input.as_str())
+            .block(input_block);
+        f.render_widget(input_para, area);
+    }
+
+    // Key Generation Modal
+    if let crate::app::InputMode::GeneratingKey = app.input_mode {
+        let area = centered_rect(60, 20, f.size());
+        f.render_widget(ratatui::widgets::Clear, area);
+        let input_block = Block::default()
+            .borders(Borders::ALL)
+            .title("Enter new key filename (e.g. my_key)")
             .style(Style::default().bg(Color::DarkGray));
         let input_para = Paragraph::new(app.input.as_str())
             .block(input_block);

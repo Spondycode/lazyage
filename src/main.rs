@@ -88,6 +88,10 @@ fn run_app<B: ratatui::backend::Backend>(
                                 KeyCode::Char('p') => {
                                     app.input_mode = InputMode::EnteringPassphrase(PassphraseAction::Encrypt);
                                 }
+                                KeyCode::Char('g') => {
+                                    app.input.clear();
+                                    app.input_mode = InputMode::GeneratingKey;
+                                }
                                 KeyCode::Char('x') => {
                                     if !app.files.is_empty() {
                                         app.input_mode = InputMode::Deleting;
@@ -181,6 +185,31 @@ fn run_app<B: ratatui::backend::Backend>(
                                     app.input_mode = InputMode::Normal;
                                 }
                                 KeyCode::Esc => {
+                                    app.input_mode = InputMode::Normal;
+                                }
+                                _ => {}
+                            }
+                        }
+                        InputMode::GeneratingKey => {
+                            match key.code {
+                                KeyCode::Enter => {
+                                    let filename = app.input.drain(..).collect::<String>();
+                                    app.input_mode = InputMode::Normal;
+                                    
+                                    if !filename.is_empty() {
+                                        match crypto::generate_new_key(&filename) {
+                                            Ok(path) => {
+                                                app.log(format!("Generated key: {}", path));
+                                                app.keys = discovery::discover_keys();
+                                            }
+                                            Err(e) => app.log(format!("Error: {}", e)),
+                                        }
+                                    }
+                                }
+                                KeyCode::Char(c) => app.input.push(c),
+                                KeyCode::Backspace => { app.input.pop(); },
+                                KeyCode::Esc => {
+                                    app.input.clear();
                                     app.input_mode = InputMode::Normal;
                                 }
                                 _ => {}
