@@ -8,7 +8,7 @@ use ratatui::{
 use crate::app::{App, Pane};
 use std::fs;
 
-pub fn render(f: &mut Frame, app: &App) {
+pub fn render(f: &mut Frame, app: &mut App) {
     // Top section (Files, Keys, Preview)
     // Bottom section (Logs, Actions)
     let chunks = Layout::default()
@@ -46,41 +46,39 @@ pub fn render(f: &mut Frame, app: &App) {
     // 1. File List
     let files: Vec<ListItem> = app.files
         .iter()
-        .enumerate()
-        .map(|(i, path)| {
-            let style = if i == app.selected_file && matches!(app.active_pane, Pane::Files) {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-            };
-            ListItem::new(path.file_name().unwrap().to_string_lossy().to_string()).style(style)
+        .map(|path| {
+            ListItem::new(path.file_name().unwrap().to_string_lossy().to_string())
         })
         .collect();
 
     let files_list = List::new(files)
-        .block(Block::default().borders(Borders::ALL).title("Files"))
-        .highlight_style(Style::default().add_modifier(Modifier::BOLD));
-    f.render_widget(files_list, left_chunks[0]);
+        .block(Block::default().borders(Borders::ALL).title(format!("Files ({}/{})", if app.files.is_empty() { 0 } else { app.selected_file + 1 }, app.files.len())))
+        .highlight_symbol(">> ")
+        .highlight_style(if matches!(app.active_pane, Pane::Files) {
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().add_modifier(Modifier::BOLD)
+        });
+    f.render_stateful_widget(files_list, left_chunks[0], &mut app.file_list_state);
 
     // 2. Key List
     let keys: Vec<ListItem> = app.keys
         .iter()
-        .enumerate()
-        .map(|(i, key)| {
-            let style = if i == app.selected_key && matches!(app.active_pane, Pane::Keys) {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-            };
+        .map(|key| {
             let type_str = if key.is_passphrase_only { "[P]" } else if key.is_secret { "[S]" } else { "[K]" };
-            ListItem::new(format!("{} {}", type_str, key.name)).style(style)
+            ListItem::new(format!("{} {}", type_str, key.name))
         })
         .collect();
 
     let keys_list = List::new(keys)
-        .block(Block::default().borders(Borders::ALL).title("Keys"))
-        .highlight_style(Style::default().add_modifier(Modifier::BOLD));
-    f.render_widget(keys_list, left_chunks[1]);
+        .block(Block::default().borders(Borders::ALL).title(format!("Keys ({}/{})", if app.keys.is_empty() { 0 } else { app.selected_key + 1 }, app.keys.len())))
+        .highlight_symbol(">> ")
+        .highlight_style(if matches!(app.active_pane, Pane::Keys) {
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().add_modifier(Modifier::BOLD)
+        });
+    f.render_stateful_widget(keys_list, left_chunks[1], &mut app.key_list_state);
 
     // 3. Preview Pane (Now in the main top-right area)
     let preview_block = Block::default().borders(Borders::ALL).title("File Preview");
@@ -129,8 +127,18 @@ pub fn render(f: &mut Frame, app: &App) {
         Line::from(vec![Span::styled("g", Style::default().fg(Color::Green)), Span::raw(": Generate Key")]),
     ];
 
-    if let Some(key) = current_key {
+    if let Some(path) = app.files.get(app.selected_file) {
         action_text.push(Line::from(""));
+        action_text.push(Line::from(vec![
+            Span::styled("File: ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::raw(path.file_name().unwrap().to_string_lossy().to_string()),
+        ]));
+    }
+
+    if let Some(key) = current_key {
+        if app.files.get(app.selected_file).is_none() {
+            action_text.push(Line::from(""));
+        }
         action_text.push(Line::from(vec![Span::styled("Key: ", Style::default().add_modifier(Modifier::BOLD)), Span::raw(&key.name)]));
     }
 

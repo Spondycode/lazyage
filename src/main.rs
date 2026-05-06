@@ -22,8 +22,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create app and load initial data
     let mut app = App::new();
-    app.files = discovery::get_files_in_cwd();
-    app.keys = discovery::discover_keys();
+    app.set_files(discovery::get_files_in_cwd());
+    app.set_keys(discovery::discover_keys());
     app.log(format!("Found {} files and {} keys.", app.files.len(), app.keys.len()));
 
     let res = run_app(&mut terminal, app);
@@ -50,12 +50,12 @@ fn run_app<B: ratatui::backend::Backend>(
     mut app: App,
 ) -> io::Result<()> {
     loop {
-        terminal.draw(|f| ui::render(f, &app))?;
+        terminal.draw(|f| ui::render(f, &mut app))?;
 
         if event::poll(Duration::from_millis(100))? {
             match event::read()? {
                 Event::FocusGained => {
-                    app.files = discovery::get_files_in_cwd();
+                    app.set_files(discovery::get_files_in_cwd());
                 }
                 Event::Key(key) => {
                     match app.input_mode {
@@ -63,13 +63,13 @@ fn run_app<B: ratatui::backend::Backend>(
                             match key.code {
                                 KeyCode::Char('q') => return Ok(()),
                                 KeyCode::Char('R') => {
-                                    app.files = discovery::get_files_in_cwd();
-                                    app.keys = discovery::discover_keys();
+                                    app.set_files(discovery::get_files_in_cwd());
+                                    app.set_keys(discovery::discover_keys());
                                     app.log("Refreshed files and keys.".to_string());
                                 }
                                 KeyCode::Tab => {
                                     app.switch_pane();
-                                    app.files = discovery::get_files_in_cwd();
+                                    app.set_files(discovery::get_files_in_cwd());
                                 }
                                 KeyCode::Down | KeyCode::Char('j') => {
                                     match app.active_pane {
@@ -106,7 +106,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                                 Ok(path) => app.log(format!("Encrypted to {}", path)),
                                                 Err(e) => app.log(format!("Error: {}", e)),
                                             }
-                                            app.files = discovery::get_files_in_cwd();
+                                            app.set_files(discovery::get_files_in_cwd());
                                         } else {
                                             app.log("No public key for selected entry.".to_string());
                                         }
@@ -129,7 +129,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                                 }
                                             }
                                         }
-                                        app.files = discovery::get_files_in_cwd();
+                                        app.set_files(discovery::get_files_in_cwd());
                                     }
                                 }
                                 _ => {}
@@ -156,7 +156,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                                 }
                                             }
                                         }
-                                        app.files = discovery::get_files_in_cwd();
+                                        app.set_files(discovery::get_files_in_cwd());
                                     }
                                 }
                                 KeyCode::Char(c) => app.input.push(c),
@@ -177,10 +177,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                             Ok(_) => app.log(format!("Deleted {}", file_path.display())),
                                             Err(e) => app.log(format!("Error deleting {}: {}", file_path.display(), e)),
                                         }
-                                        app.files = discovery::get_files_in_cwd();
-                                        if app.selected_file >= app.files.len() && !app.files.is_empty() {
-                                            app.selected_file = app.files.len() - 1;
-                                        }
+                                        app.set_files(discovery::get_files_in_cwd());
                                     }
                                     app.input_mode = InputMode::Normal;
                                 }
@@ -200,7 +197,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                         match crypto::generate_new_key(&filename) {
                                             Ok(path) => {
                                                 app.log(format!("Generated key: {}", path));
-                                                app.keys = discovery::discover_keys();
+                                                app.set_keys(discovery::discover_keys());
                                             }
                                             Err(e) => app.log(format!("Error: {}", e)),
                                         }
