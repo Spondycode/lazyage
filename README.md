@@ -46,16 +46,44 @@ lazyage
 
 ### Keybindings
 
-| Key | Action |
-|-----|--------|
-| `Tab` | Switch between Files and Keys panes |
-| `↑/↓` or `k/j` | Navigate lists |
-| `e` | **Encrypt** selected file with selected key |
-| `p` | **Encrypt** selected file with **Passphrase** |
-| `d` | **Decrypt** selected file |
-| `x` | **Delete** selected file (with confirmation) |
-| `R` | **Refresh** file and key lists |
-| `q` / `Esc` | Quit or Close Modal |
+| Key            | Action                                        |
+| -------------- | --------------------------------------------- |
+| `Tab`          | Switch between Files and Keys panes           |
+| `↑/↓` or `k/j` | Navigate lists                                |
+| `e`            | **Encrypt** selected file with selected key   |
+| `p`            | **Encrypt** selected file with **Passphrase** |
+| `d`            | **Decrypt** selected file                     |
+| `x`            | **Delete** selected file (with confirmation)  |
+| `R`            | **Refresh** file and key lists                |
+| `q` / `Esc`    | Quit or Close Modal                           |
+
+If you want to send to multiple recipients, you can create a recipients.txt file
+in the config folder. ~/.config/age/
+Looking in the Keys pane, you'll see that your text file will give you a count
+of how many recipients.
+
+## LazyAge supports the plug-ins, and in particular the YubiKey plugin
+
+I find the best way to encrypt to YubiKey is to have a function in my
+fish.config file. You can do something similar with ZSH.
+You can encrypt through LazyAge encryption, then I recommend using a
+shell script to decrypt.
+
+## Fish function
+
+```
+# Age Yubikey with backup recipients
+function vault
+    age -R ~/.config/age/YubiKey.txt -o argv[1].vault.age $argv[1]
+end
+
+# Age Unlock the above encryption
+function unlock
+    age-plugin-yubikey --identity | grep AGE-PLUGIN | tr -d '[:space:]' >.tmp_key
+    age -d -i .tmp_key $argv[1]
+    rm .tmp_key
+end
+```
 
 ## 🏗️ Project Structure
 
