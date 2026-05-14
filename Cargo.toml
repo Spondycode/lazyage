@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ratatui = "0.26.1"
-crossterm = "0.27.0"
-age = { version = "0.10.0", features = ["armor", "ssh"] }
-directories = "5.0.1"
+ratatui = "0.30.0"
+crossterm = "0.29.0"
+age = { version = "0.11.3", features = ["armor", "ssh"] }
+directories = "6.0.0"
 walkdir = "2.4.0"
 anyhow = "1.0.75"
-unicode-width = "0.1.11"
+unicode-width = "0.2.2"
 chrono = "0.4.31"
-secrecy = "0.8.0"
+secrecy = "0.10.3"

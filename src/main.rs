@@ -5,11 +5,11 @@ mod discovery;
 
 use std::{io, time::Duration};
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, EnableFocusChange, DisableFocusChange},
+    event::{self, EnableMouseCapture, Event, KeyCode, EnableFocusChange},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{enable_raw_mode, EnterAlternateScreen},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::DefaultTerminal;
 use crate::app::{App, Pane, InputMode, PassphraseAction};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,8 +17,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture, EnableFocusChange)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    
+    let mut terminal = ratatui::init();
 
     // Create app and load initial data
     let mut app = App::new();
@@ -29,14 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let res = run_app(&mut terminal, app);
 
     // Restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture,
-        DisableFocusChange
-    )?;
-    terminal.show_cursor()?;
+    ratatui::restore();
 
     if let Err(err) = res {
         println!("{:?}", err)
@@ -45,8 +38,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn run_app<B: ratatui::backend::Backend>(
-    terminal: &mut Terminal<B>,
+fn run_app(
+    terminal: &mut DefaultTerminal,
     mut app: App,
 ) -> io::Result<()> {
     loop {

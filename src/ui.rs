@@ -17,7 +17,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             Constraint::Min(3),
             Constraint::Length(10),
         ])
-        .split(f.size());
+        .split(f.area());
 
     let top_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -148,7 +148,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // Passphrase Input Modal
     if let crate::app::InputMode::EnteringPassphrase(_) = app.input_mode {
-        let area = centered_rect(60, 20, f.size());
+        let area = centered_rect(60, 20, f.area());
         f.render_widget(ratatui::widgets::Clear, area);
         let input_block = Block::default()
             .borders(Borders::ALL)
@@ -161,7 +161,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // Key Generation Modal
     if let crate::app::InputMode::GeneratingKey = app.input_mode {
-        let area = centered_rect(60, 20, f.size());
+        let area = centered_rect(60, 20, f.area());
         f.render_widget(ratatui::widgets::Clear, area);
         let input_block = Block::default()
             .borders(Borders::ALL)
@@ -174,7 +174,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // Delete Confirmation Modal
     if let crate::app::InputMode::Deleting = app.input_mode {
-        let area = centered_rect(60, 20, f.size());
+        let area = centered_rect(60, 20, f.area());
         f.render_widget(ratatui::widgets::Clear, area);
         let file_name = app.files.get(app.selected_file)
             .and_then(|p| p.file_name())
