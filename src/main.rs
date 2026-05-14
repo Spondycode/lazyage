@@ -97,18 +97,47 @@ fn run_app<B: ratatui::backend::Backend>(
                                         app.input_mode = InputMode::Deleting;
                                     }
                                 }
+                                KeyCode::Char(' ') => {
+                                    if matches!(app.active_pane, Pane::Keys) {
+                                        app.toggle_key_selection();
+                                    }
+                                }
                                 KeyCode::Char('e') => {
-                                    if let (Some(file), Some(key)) = (app.files.get(app.selected_file), app.keys.get(app.selected_key)) {
-                                        if key.is_passphrase_only {
+                                    if let Some(file) = app.files.get(app.selected_file) {
+                                        let mut selected_recipients = Vec::new();
+                                        let mut use_passphrase = false;
+
+                                        let any_selected = app.keys.iter().any(|k| k.selected);
+                                        
+                                        if any_selected {
+                                            for key in &app.keys {
+                                                if key.selected {
+                                                    if key.is_passphrase_only {
+                                                        use_passphrase = true;
+                                                    } else if let Some(recipient) = &key.public_key {
+                                                        selected_recipients.push(recipient.clone());
+                                                    }
+                                                }
+                                            }
+                                        } else if let Some(key) = app.keys.get(app.selected_key) {
+                                            // Fallback to highlighted key if nothing is explicitly selected
+                                            if key.is_passphrase_only {
+                                                use_passphrase = true;
+                                            } else if let Some(recipient) = &key.public_key {
+                                                selected_recipients.push(recipient.clone());
+                                            }
+                                        }
+
+                                        if use_passphrase {
                                             app.input_mode = InputMode::EnteringPassphrase(PassphraseAction::Encrypt);
-                                        } else if let Some(recipient) = &key.public_key {
-                                            match crypto::encrypt_with_key(file, recipient) {
+                                        } else if !selected_recipients.is_empty() {
+                                            match crypto::encrypt_file(file, selected_recipients, None) {
                                                 Ok(path) => app.log(format!("Encrypted to {}", path)),
                                                 Err(e) => app.log(format!("Error: {}", e)),
                                             }
                                             app.set_files(discovery::get_files_in_cwd());
                                         } else {
-                                            app.log("No public key for selected entry.".to_string());
+                                            app.log("No recipients selected.".to_string());
                                         }
                                     }
                                 }
@@ -144,14 +173,39 @@ fn run_app<B: ratatui::backend::Backend>(
                                     if let Some(file) = app.files.get(app.selected_file) {
                                         match action {
                                             PassphraseAction::Encrypt => {
-                                                match crypto::encrypt_with_passphrase(file, &input) {
-                                                    Ok(path) => app.log(format!("Encrypted with passphrase to {}", path)),
+                                                let mut selected_recipients = Vec::new();
+                                                let any_selected = app.keys.iter().any(|k| k.selected);
+
+                                                if any_selected {
+                                                    for key in &app.keys {
+                                                        if key.selected && !key.is_passphrase_only {
+                                                            if let Some(recipient) = &key.public_key {
+                                                                selected_recipients.push(recipient.clone());
+                                                            }
+                                                        }
+                                                    }
+                                                } else if let Some(key) = app.keys.get(app.selected_key) {
+                                                    // Only use highlighted key if it's NOT the passphrase only one
+                                                    // (since we are already using a passphrase)
+                                                    if !key.is_passphrase_only {
+                                                        if let Some(recipient) = &key.public_key {
+                                                            selected_recipients.push(recipient.clone());
+                                                        }
+                                                    }
+                                                }
+
+                                                match crypto::encrypt_file(file, selected_recipients, Some(input)) {
+                                                    Ok(path) => app.log(format!("Encrypted to {}", path)),
                                                     Err(e) => app.log(format!("Error: {}", e)),
                                                 }
                                             }
                                             PassphraseAction::Decrypt => {
-                                                match crypto::decrypt_file(file, vec![], Some(&input)) {
-                                                    Ok(path) => app.log(format!("Decrypted with passphrase to {}", path)),
+                                                let id_paths: Vec<_> = app.keys.iter()
+                                                    .filter(|k| k.is_secret)
+                                                    .map(|k| k.path.clone())
+                                                    .collect();
+                                                match crypto::decrypt_file(file, id_paths, Some(&input)) {
+                                                    Ok(path) => app.log(format!("Decrypted to {}", path)),
                                                     Err(e) => app.log(format!("Error: {}", e)),
                                                 }
                                             }

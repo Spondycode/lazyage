@@ -65,8 +65,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let keys: Vec<ListItem> = app.keys
         .iter()
         .map(|key| {
+            let selection_mark = if key.selected { "[x] " } else { "[ ] " };
             let type_str = if key.is_passphrase_only { "[P]" } else if key.is_secret { "[S]" } else { "[K]" };
-            ListItem::new(format!("{} {}", type_str, key.name))
+            ListItem::new(format!("{} {} {}", selection_mark, type_str, key.name))
         })
         .collect();
 
@@ -124,7 +125,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         Line::from(vec![Span::styled("Tab", Style::default().fg(Color::Cyan)), Span::raw(": Switch Panes"), Span::raw(" | "), Span::styled("R", Style::default().fg(Color::Cyan)), Span::raw(": Refresh")]),
         Line::from(vec![Span::styled("e", Style::default().fg(Color::Green)), Span::raw(": Encrypt"), Span::raw(" | "), Span::styled("d", Style::default().fg(Color::Red)), Span::raw(": Decrypt")]),
         Line::from(vec![Span::styled("p", Style::default().fg(Color::Green)), Span::raw(": Encrypt (Passphrase)"), Span::raw(" | "), Span::styled("x", Style::default().fg(Color::Red)), Span::raw(": Delete")]),
-        Line::from(vec![Span::styled("g", Style::default().fg(Color::Green)), Span::raw(": Generate Key")]),
+        Line::from(vec![Span::styled("g", Style::default().fg(Color::Green)), Span::raw(": Generate Key"), Span::raw(" | "), Span::styled("Space", Style::default().fg(Color::Cyan)), Span::raw(": Toggle Key")]),
     ];
 
     if let Some(path) = app.files.get(app.selected_file) {

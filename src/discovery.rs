@@ -23,6 +23,7 @@ pub fn discover_keys() -> Vec<KeyInfo> {
         is_secret: false,
         is_passphrase_only: true,
         public_key: None,
+        selected: false,
     });
     
     // Check CWD for keys
@@ -105,6 +106,7 @@ fn try_load_key(path: &std::path::Path) -> Option<KeyInfo> {
             is_secret: true,
             is_passphrase_only: false,
             public_key,
+            selected: false,
         });
     }
 
@@ -116,6 +118,7 @@ fn try_load_key(path: &std::path::Path) -> Option<KeyInfo> {
             is_secret: false,
             is_passphrase_only: false,
             public_key: Some(trimmed_content.to_string()),
+            selected: false,
         });
     }
 
@@ -131,6 +134,7 @@ fn try_load_key(path: &std::path::Path) -> Option<KeyInfo> {
             is_secret: false,
             is_passphrase_only: false,
             public_key: Some(trimmed_content.to_string()),
+            selected: false,
         });
     }
 

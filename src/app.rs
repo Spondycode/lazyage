@@ -40,6 +40,7 @@ pub struct KeyInfo {
     pub is_secret: bool,
     pub is_passphrase_only: bool,
     pub public_key: Option<String>,
+    pub selected: bool,
 }
 
 impl App {
@@ -77,7 +78,19 @@ impl App {
     }
 
     pub fn set_keys(&mut self, keys: Vec<KeyInfo>) {
+        // Try to preserve selection if possible, otherwise all false
+        let previously_selected: Vec<String> = self.keys.iter()
+            .filter(|k| k.selected)
+            .map(|k| k.name.clone())
+            .collect();
+
         self.keys = keys;
+        for key in &mut self.keys {
+            if previously_selected.contains(&key.name) {
+                key.selected = true;
+            }
+        }
+
         if self.keys.is_empty() {
             self.selected_key = 0;
             self.key_list_state.select(None);
@@ -118,6 +131,12 @@ impl App {
         if !self.keys.is_empty() && self.selected_key > 0 {
             self.selected_key -= 1;
             self.key_list_state.select(Some(self.selected_key));
+        }
+    }
+
+    pub fn toggle_key_selection(&mut self) {
+        if !self.keys.is_empty() && self.selected_key < self.keys.len() {
+            self.keys[self.selected_key].selected = !self.keys[self.selected_key].selected;
         }
     }
 
