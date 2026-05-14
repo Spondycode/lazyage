@@ -67,7 +67,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .map(|key| {
             let selection_mark = if key.selected { "[x] " } else { "[ ] " };
             let type_str = if key.is_passphrase_only { "[P]" } else if key.is_secret { "[S]" } else { "[K]" };
-            ListItem::new(format!("{} {} {}", selection_mark, type_str, key.name))
+            let count_str = if key.recipients.len() > 1 {
+                format!(" ({})", key.recipients.len())
+            } else {
+                "".to_string()
+            };
+            ListItem::new(format!("{} {} {}{}", selection_mark, type_str, key.name, count_str))
         })
         .collect();
 

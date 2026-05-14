@@ -39,7 +39,7 @@ pub struct KeyInfo {
     pub path: PathBuf,
     pub is_secret: bool,
     pub is_passphrase_only: bool,
-    pub public_key: Option<String>,
+    pub recipients: Vec<String>,
     pub selected: bool,
 }
 

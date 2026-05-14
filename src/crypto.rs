@@ -54,9 +54,22 @@ pub fn encrypt_file(input_path: &Path, recipients: Vec<String>, passphrase: Opti
         let mut age_recipients: Vec<Box<dyn Recipient + Send>> = Vec::new();
         for r in recipients {
             if r.starts_with("age1") {
-                age_recipients.push(Box::new(age::x25519::Recipient::from_str(&r).map_err(|e| anyhow!("Invalid age key: {:?}", e))?));
+                if let Ok(recipient) = age::x25519::Recipient::from_str(&r) {
+                    age_recipients.push(Box::new(recipient));
+                } else if let Ok(p_recip) = age::plugin::Recipient::from_str(&r) {
+                    let plugin_name = p_recip.plugin().to_string();
+                    let plugin_recipient = age::plugin::RecipientPluginV1::new(
+                        &plugin_name,
+                        &[p_recip],
+                        &[],
+                        age::NoCallbacks,
+                    ).map_err(|e| anyhow!("Failed to initialize plugin [{}]: {:?}", plugin_name, e))?;
+                    age_recipients.push(Box::new(plugin_recipient));
+                } else {
+                    return Err(anyhow!("Invalid age key [{}].", r));
+                }
             } else if r.starts_with("ssh-") {
-                age_recipients.push(Box::new(age::ssh::Recipient::from_str(&r).map_err(|e| anyhow!("Invalid SSH key: {:?}", e))?));
+                age_recipients.push(Box::new(age::ssh::Recipient::from_str(&r).map_err(|e| anyhow!("Invalid SSH key [{}]: {:?}", r, e))?));
             }
         }
         
@@ -121,10 +134,22 @@ pub fn decrypt_file(input_path: &Path, identities_paths: Vec<PathBuf>, passphras
             let mut identities: Vec<Box<dyn Identity + Send>> = Vec::new();
             for id_path in &identities_paths {
                 if let Ok(content) = std::fs::read_to_string(id_path) {
-                    if content.contains("AGE-SECRET-KEY-") {
-                        if let Some(key_line) = content.lines().find(|l| l.starts_with("AGE-SECRET-KEY-")) {
-                            if let Ok(id) = age::x25519::Identity::from_str(key_line.trim()) {
+                    for line in content.lines() {
+                        let trimmed = line.trim();
+                        if trimmed.starts_with("AGE-SECRET-KEY-") {
+                            if let Ok(id) = age::x25519::Identity::from_str(trimmed) {
                                 identities.push(Box::new(id));
+                            }
+                        } else if trimmed.starts_with("AGE-PLUGIN-") {
+                            if let Ok(p_id) = age::plugin::Identity::from_str(trimmed) {
+                                let plugin_name = p_id.plugin().to_string();
+                                if let Ok(plugin_identity) = age::plugin::IdentityPluginV1::new(
+                                    &plugin_name,
+                                    &[p_id],
+                                    age::NoCallbacks,
+                                ) {
+                                    identities.push(Box::new(plugin_identity));
+                                }
                             }
                         }
                     }

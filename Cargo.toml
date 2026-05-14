@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 ratatui = "0.30.0"
 crossterm = "0.29.0"
-age = { version = "0.11.3", features = ["armor", "ssh"] }
+age = { version = "0.11.3", features = ["armor", "ssh", "plugin"] }
 directories = "6.0.0"
 walkdir = "2.4.0"
 anyhow = "1.0.75"

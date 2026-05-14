@@ -107,8 +107,8 @@ fn run_app(
                                                 if key.selected {
                                                     if key.is_passphrase_only {
                                                         use_passphrase = true;
-                                                    } else if let Some(recipient) = &key.public_key {
-                                                        selected_recipients.push(recipient.clone());
+                                                    } else {
+                                                        selected_recipients.extend(key.recipients.clone());
                                                     }
                                                 }
                                             }
@@ -116,8 +116,8 @@ fn run_app(
                                             // Fallback to highlighted key if nothing is explicitly selected
                                             if key.is_passphrase_only {
                                                 use_passphrase = true;
-                                            } else if let Some(recipient) = &key.public_key {
-                                                selected_recipients.push(recipient.clone());
+                                            } else {
+                                                selected_recipients.extend(key.recipients.clone());
                                             }
                                         }
 
@@ -172,18 +172,14 @@ fn run_app(
                                                 if any_selected {
                                                     for key in &app.keys {
                                                         if key.selected && !key.is_passphrase_only {
-                                                            if let Some(recipient) = &key.public_key {
-                                                                selected_recipients.push(recipient.clone());
-                                                            }
+                                                            selected_recipients.extend(key.recipients.clone());
                                                         }
                                                     }
                                                 } else if let Some(key) = app.keys.get(app.selected_key) {
                                                     // Only use highlighted key if it's NOT the passphrase only one
                                                     // (since we are already using a passphrase)
                                                     if !key.is_passphrase_only {
-                                                        if let Some(recipient) = &key.public_key {
-                                                            selected_recipients.push(recipient.clone());
-                                                        }
+                                                        selected_recipients.extend(key.recipients.clone());
                                                     }
                                                 }
 

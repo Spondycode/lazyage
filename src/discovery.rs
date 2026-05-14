@@ -22,7 +22,7 @@ pub fn discover_keys() -> Vec<KeyInfo> {
         path: PathBuf::new(),
         is_secret: false,
         is_passphrase_only: true,
-        public_key: None,
+        recipients: Vec::new(),
         selected: false,
     });
     
@@ -32,9 +32,7 @@ pub fn discover_keys() -> Vec<KeyInfo> {
             let path = entry.path();
             if let Some(ext) = path.extension() {
                 if ext == "txt" || ext == "key" {
-                   if let Some(key) = try_load_key(&path) {
-                       keys.push(key);
-                   }
+                   keys.extend(load_keys_from_file(&path));
                 }
             }
         }
@@ -51,9 +49,7 @@ pub fn discover_keys() -> Vec<KeyInfo> {
             for entry in WalkDir::new(&ssh_dir).follow_links(true).max_depth(1).into_iter().flatten() {
                 let path = entry.path();
                 if path.is_file() {
-                    if let Some(key) = try_load_key(path) {
-                        keys.push(key);
-                    }
+                    keys.extend(load_keys_from_file(path));
                 }
             }
         }
@@ -64,9 +60,7 @@ pub fn discover_keys() -> Vec<KeyInfo> {
             for entry in WalkDir::new(&age_config_dir).follow_links(true).max_depth(2).into_iter().flatten() {
                 let path = entry.path();
                 if path.is_file() {
-                    if let Some(key) = try_load_key(path) {
-                        keys.push(key);
-                    }
+                    keys.extend(load_keys_from_file(path));
                 }
             }
         }
@@ -78,9 +72,7 @@ pub fn discover_keys() -> Vec<KeyInfo> {
                 for entry in WalkDir::new(&plat_config_dir).follow_links(true).max_depth(2).into_iter().flatten() {
                     let path = entry.path();
                     if path.is_file() {
-                        if let Some(key) = try_load_key(path) {
-                            keys.push(key);
-                        }
+                        keys.extend(load_keys_from_file(path));
                     }
                 }
             }
@@ -90,55 +82,92 @@ pub fn discover_keys() -> Vec<KeyInfo> {
     keys
 }
 
-fn try_load_key(path: &std::path::Path) -> Option<KeyInfo> {
-    let content = fs::read_to_string(path).ok()?;
-    let trimmed_content = content.trim();
-    
-    // Simple check if it looks like an age key
-    if content.contains("AGE-SECRET-KEY-") {
-        let public_key = content.lines()
-            .find(|line| line.starts_with("# public key: "))
-            .map(|line| line.replace("# public key: ", "").trim().to_string());
+fn load_keys_from_file(path: &std::path::Path) -> Vec<KeyInfo> {
+    let mut found_keys = Vec::new();
+    let content = match fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(_) => return found_keys,
+    };
 
-        return Some(KeyInfo {
-            name: path.file_name()?.to_string_lossy().to_string(),
-            path: path.to_path_buf(),
-            is_secret: true,
-            is_passphrase_only: false,
-            public_key,
-            selected: false,
-        });
+    let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+
+    // 1. Check if it's an age secret key or plugin identity file
+    if content.contains("AGE-SECRET-KEY-") || content.contains("AGE-PLUGIN-") {
+        for (i, line) in content.lines().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("AGE-SECRET-KEY-") || trimmed.starts_with("AGE-PLUGIN-") {
+                let public_key = content.lines().take(i)
+                    .find(|l| l.starts_with("# public key: "))
+                    .map(|l| l.replace("# public key: ", "").trim().to_string());
+                
+                let mut recipients = Vec::new();
+                if let Some(pk) = public_key {
+                    recipients.push(pk);
+                }
+
+                found_keys.push(KeyInfo {
+                    name: if found_keys.is_empty() { filename.clone() } else { format!("{} (Key {})", filename, found_keys.len() + 1) },
+                    path: path.to_path_buf(),
+                    is_secret: true,
+                    is_passphrase_only: false,
+                    recipients,
+                    selected: false,
+                });
+            }
+        }
+        if !found_keys.is_empty() {
+            return found_keys;
+        }
     }
 
-    // Check for native age public keys
-    if trimmed_content.starts_with("age1") {
-         return Some(KeyInfo {
-            name: path.file_name()?.to_string_lossy().to_string(),
+    // 2. Check for public keys (one per line, supporting multiple)
+    let mut file_recipients = Vec::new();
+    for line in content.lines() {
+        let mut trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        // Strip common labels
+        if trimmed.to_lowercase().starts_with("public key: ") {
+            trimmed = trimmed[12..].trim();
+        } else if trimmed.to_lowercase().starts_with("recipient: ") {
+            trimmed = trimmed[11..].trim();
+        }
+
+        if trimmed.starts_with("age1") || 
+           trimmed.starts_with("ssh-ed25519") || 
+           trimmed.starts_with("ssh-rsa") || 
+           trimmed.starts_with("ecdsa-sha2-") || 
+           trimmed.starts_with("ssh-dss") 
+        {
+            // Extract only the key part (first word for age keys, or part of SSH keys)
+            let key_part = if trimmed.starts_with("age1") {
+                trimmed.split_whitespace().next().unwrap_or(trimmed).to_string()
+            } else {
+                let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    format!("{} {}", parts[0], parts[1])
+                } else {
+                    trimmed.to_string()
+                }
+            };
+            file_recipients.push(key_part);
+        }
+    }
+
+    if !file_recipients.is_empty() {
+        found_keys.push(KeyInfo {
+            name: filename,
             path: path.to_path_buf(),
             is_secret: false,
             is_passphrase_only: false,
-            public_key: Some(trimmed_content.to_string()),
+            recipients: file_recipients,
             selected: false,
         });
     }
 
-    // Check for SSH public keys
-    if trimmed_content.starts_with("ssh-ed25519") 
-        || trimmed_content.starts_with("ssh-rsa")
-        || trimmed_content.starts_with("ecdsa-sha2-")
-        || trimmed_content.starts_with("ssh-dss") 
-    {
-         return Some(KeyInfo {
-            name: path.file_name()?.to_string_lossy().to_string(),
-            path: path.to_path_buf(),
-            is_secret: false,
-            is_passphrase_only: false,
-            public_key: Some(trimmed_content.to_string()),
-            selected: false,
-        });
-    }
-
-    None
+    found_keys
 }
 
 #[cfg(test)]
@@ -147,31 +176,39 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn test_try_load_key() {
+    fn test_load_keys_from_file() {
         let test_dir = std::env::current_dir().unwrap().join("test_temp_keys");
         fs::create_dir_all(&test_dir).unwrap();
         
         let secret_path = test_dir.join("secret.key");
         fs::write(&secret_path, "# public key: age1v9l...\nAGE-SECRET-KEY-1...").unwrap();
         
-        let key = try_load_key(&secret_path).unwrap();
+        let keys = load_keys_from_file(&secret_path);
+        assert_eq!(keys.len(), 1);
+        let key = &keys[0];
         assert_eq!(key.name, "secret.key");
         assert!(key.is_secret);
-        assert_eq!(key.public_key, Some("age1v9l...".to_string()));
+        assert_eq!(key.recipients, vec!["age1v9l...".to_string()]);
 
         let public_path = test_dir.join("public.key");
-        fs::write(&public_path, "age1...").unwrap();
-        let key = try_load_key(&public_path).unwrap();
+        fs::write(&public_path, "age1...\nage1another...").unwrap();
+        let keys = load_keys_from_file(&public_path);
+        assert_eq!(keys.len(), 1);
+        let key = &keys[0];
         assert_eq!(key.name, "public.key");
         assert!(!key.is_secret);
-        assert_eq!(key.public_key, Some("age1...".to_string()));
+        assert_eq!(key.recipients.len(), 2);
+        assert_eq!(key.recipients[0], "age1...");
+        assert_eq!(key.recipients[1], "age1another...");
 
         let ssh_path = test_dir.join("id_ed25519.pub");
         fs::write(&ssh_path, "ssh-ed25519 AAA...").unwrap();
-        let key = try_load_key(&ssh_path).unwrap();
+        let keys = load_keys_from_file(&ssh_path);
+        assert_eq!(keys.len(), 1);
+        let key = &keys[0];
         assert_eq!(key.name, "id_ed25519.pub");
         assert!(!key.is_secret);
-        assert_eq!(key.public_key, Some("ssh-ed25519 AAA...".to_string()));
+        assert_eq!(key.recipients, vec!["ssh-ed25519 AAA...".to_string()]);
         
         fs::remove_dir_all(&test_dir).unwrap();
     }
