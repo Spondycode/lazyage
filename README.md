@@ -1,8 +1,11 @@
 # 🛡️ lazyage
 
-A professional, cross-platform TUI for **age** encryption, inspired by the aesthetics of Lazygit.
+A professional, cross-platform TUI for **age** encryption,
+inspired by the aesthetics of Lazygit.
 
-Built with Rust and [Ratatui](https://ratatui.rs/), `lazyage` provides a seamless terminal interface for managing file encryption and decryption without needing to remember complex CLI flags.
+Built with Rust and [Ratatui](https://ratatui.rs/), `lazyage` provides a seamless terminal
+interface for managing file encryption and decryption without needing
+to remember complex CLI flags.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Rust](https://img.shields.io/badge/rust-stable-brightgreen.svg)
@@ -18,7 +21,8 @@ Built with Rust and [Ratatui](https://ratatui.rs/), `lazyage` provides a seamles
 - **File Preview**: Live preview of text files before encryption.
 - **Safety First**: Confirmation modals for destructive actions like file deletion.
 - **Armored Output**: All encryption uses ASCII armor by default for easy sharing.
-- **Auto-Sync**: Automatically refreshes when you switch back to the terminal or switch panes.
+- **Auto-Sync**: Automatically refreshes when you switch back to the terminal
+  or switch panes.
 
 ## 🚀 Installation
 
@@ -94,4 +98,40 @@ end
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License
+
+- see the [LICENSE](LICENSE) file for details.
+
+---
+
+## Copyright Notice from Age
+
+Copyright 2019 The age Authors
+Copyright 2019 Google LLC
+Copyright 2022 Filippo Valsorda
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+- Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+- Redistributions in binary form must reproduce the above
+  copyright notice, this list of conditions and the following disclaimer
+  in the documentation and/or other materials provided with the
+  distribution.
+- Neither the name of the age project nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
