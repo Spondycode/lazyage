@@ -10,7 +10,7 @@ use crossterm::{
     terminal::{enable_raw_mode, EnterAlternateScreen},
 };
 use ratatui::DefaultTerminal;
-use crate::app::{App, Pane, InputMode, PassphraseAction};
+use crate::app::{App, Pane, InputMode, PassphraseAction, FileFilter, FileSort};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Setup terminal
@@ -80,6 +80,28 @@ fn run_app(
                                 }
                                 KeyCode::Char('p') => {
                                     app.input_mode = InputMode::EnteringPassphrase(PassphraseAction::Encrypt);
+                                }
+                                KeyCode::Char('f') => {
+                                    if matches!(app.active_pane, Pane::Files) {
+                                        app.next_filter();
+                                        let msg = match app.file_filter {
+                                            FileFilter::All => "Show all files",
+                                            FileFilter::Encrypted => "Show encrypted (.age) files only",
+                                            FileFilter::Decrypted => "Show decrypted (.decrypted) files only",
+                                        };
+                                        app.log(msg.to_string());
+                                    }
+                                }
+                                KeyCode::Char('s') => {
+                                    if matches!(app.active_pane, Pane::Files) {
+                                        app.next_sort();
+                                        let msg = match app.file_sort {
+                                            FileSort::Alphabetical => "Sort files alphabetically",
+                                            FileSort::EncryptedFirst => "Sort files: encrypted (.age) first",
+                                            FileSort::DecryptedFirst => "Sort files: decrypted (.decrypted) first",
+                                        };
+                                        app.log(msg.to_string());
+                                    }
                                 }
                                 KeyCode::Char('g') => {
                                     app.input.clear();

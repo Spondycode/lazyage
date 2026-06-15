@@ -1,0 +1,3 @@
+agehelp.md | age -r age1se1q0j8nacq8ns6dmwhl5pj7sdftwlfah07afkwnaxsvrpfvru8rl476k5cc9y -o test.age
+
+age1se1q0j8nacq8ns6dmwhl5pj7sdftwlfah07afkwnaxsvrpfvru8rl476k5cc9y

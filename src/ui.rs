@@ -5,7 +5,7 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
-use crate::app::{App, Pane};
+use crate::app::{App, Pane, FileFilter, FileSort};
 use std::fs;
 
 pub fn render(f: &mut Frame, app: &mut App) {
@@ -51,8 +51,26 @@ pub fn render(f: &mut Frame, app: &mut App) {
         })
         .collect();
 
+    let filter_str = match app.file_filter {
+        FileFilter::All => "All",
+        FileFilter::Encrypted => "Encrypted (.age)",
+        FileFilter::Decrypted => "Decrypted (.decrypted)",
+    };
+    let sort_str = match app.file_sort {
+        FileSort::Alphabetical => "Alpha",
+        FileSort::EncryptedFirst => "Encrypted First",
+        FileSort::DecryptedFirst => "Decrypted First",
+    };
+    let files_title = format!(
+        "Files ({}/{}) [Filter: {}, Sort: {}]",
+        if app.files.is_empty() { 0 } else { app.selected_file + 1 },
+        app.files.len(),
+        filter_str,
+        sort_str
+    );
+
     let files_list = List::new(files)
-        .block(Block::default().borders(Borders::ALL).title(format!("Files ({}/{})", if app.files.is_empty() { 0 } else { app.selected_file + 1 }, app.files.len())))
+        .block(Block::default().borders(Borders::ALL).title(files_title))
         .highlight_symbol(">> ")
         .highlight_style(if matches!(app.active_pane, Pane::Files) {
             Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
@@ -132,6 +150,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
         Line::from(vec![Span::styled("p", Style::default().fg(Color::Green)), Span::raw(": Encrypt (Passphrase)"), Span::raw(" | "), Span::styled("x", Style::default().fg(Color::Red)), Span::raw(": Delete")]),
         Line::from(vec![Span::styled("g", Style::default().fg(Color::Green)), Span::raw(": Generate Key"), Span::raw(" | "), Span::styled("Space", Style::default().fg(Color::Cyan)), Span::raw(": Toggle Key")]),
     ];
+
+    if matches!(app.active_pane, Pane::Files) {
+        action_text.push(Line::from(vec![
+            Span::styled("f", Style::default().fg(Color::Cyan)), Span::raw(": Filter Files"),
+            Span::raw(" | "),
+            Span::styled("s", Style::default().fg(Color::Cyan)), Span::raw(": Sort Files")
+        ]));
+    }
 
     if let Some(path) = app.files.get(app.selected_file) {
         action_text.push(Line::from(""));
