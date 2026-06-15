@@ -14,24 +14,41 @@ to remember complex CLI flags.
 
 - **Lazygit-style UI**: Intuitive pane-based navigation.
 - **File Explorer**: Browse and select files in your current directory.
-- **Key Discovery**: Automatically finds `age` secret keys and SSH public keys (`~/.ssh/`).
+- **Key Discovery**: Automatically finds `age` secret keys and SSH public
+  keys (`~/.ssh/`).
 - **Multiple Methods**:
   - Encrypt with public keys (`age1...` or `ssh-...`).
   - Encrypt with a passphrase.
 - **File Preview**: Live preview of text files before encryption.
-- **Safety First**: Confirmation modals for destructive actions like file deletion.
-- **Armored Output**: All encryption uses ASCII armor by default for easy sharing.
+- **Sorting & Filtering**: Easily filter files (All, Encrypted `.age` only,
+  or Decrypted `.decrypted` only) and change the sort order (Alphabetical,
+  Encrypted First, or Decrypted First).
+- **Safety First**: Confirmation modals for destructive actions like file
+  deletion.
+- **Armored Output**: All encryption uses ASCII armor by default for easy
+  sharing.
 - **Auto-Sync**: Automatically refreshes when you switch back to the terminal
   or switch panes.
 
 ## 🚀 Installation
 
-### Prerequisites
+### Homebrew (Recommended)
+
+You can install `lazyage` via Homebrew by tapping the custom repository:
+
+```bash
+brew tap Spondycode/tap
+brew install lazyage
+```
+
+### From Source
+
+#### Prerequisites
 
 - [Rust](https://www.rust-lang.org/tools/install) (cargo)
 - `age` (optional, as `lazyage` uses a native Rust implementation)
 
-### From Source
+#### Build Steps
 
 ```bash
 git clone https://github.com/Spondycode/lazyage.git
@@ -50,16 +67,18 @@ lazyage
 
 ### Keybindings
 
-| Key            | Action                                        |
-| -------------- | --------------------------------------------- |
-| `Tab`          | Switch between Files and Keys panes           |
-| `↑/↓` or `k/j` | Navigate lists                                |
-| `e`            | **Encrypt** selected file with selected key   |
-| `p`            | **Encrypt** selected file with **Passphrase** |
-| `d`            | **Decrypt** selected file                     |
-| `x`            | **Delete** selected file (with confirmation)  |
-| `R`            | **Refresh** file and key lists                |
-| `q` / `Esc`    | Quit or Close Modal                           |
+| Key | Action |
+| --- | ------ |
+| `Tab` | Switch between Files and Keys panes |
+| `↑/↓` or `k/j` | Navigate lists |
+| `e` | **Encrypt** selected file with selected key |
+| `p` | **Encrypt** selected file with **Passphrase** |
+| `d` | **Decrypt** selected file |
+| `f` | **Filter** files (All, Encrypted, Decrypted) |
+| `s` | **Sort** files (Alpha, Encrypted first, Decrypted first) |
+| `x` | **Delete** selected file (with confirmation) |
+| `R` | **Refresh** file and key lists |
+| `q` / `Esc` | Quit or Close Modal |
 
 If you want to send to multiple recipients, you can create a recipients.txt file
 in the config folder. ~/.config/age/
