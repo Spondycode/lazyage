@@ -18,7 +18,7 @@ pub fn generate_new_key(filename: &str) -> Result<String> {
         .or_else(|| std::env::var("HOME").ok().map(PathBuf::from))
         .ok_or_else(|| anyhow!("Could not find home directory"))?;
 
-    let age_dir = home_dir.join(".config").join("age");
+    let age_dir = home_dir.join(".config").join("age").join("keys");
     if !age_dir.exists() {
         std::fs::create_dir_all(&age_dir)?;
     }
@@ -203,4 +203,22 @@ pub fn decrypt_file(input_path: &Path, identities_paths: Vec<PathBuf>, passphras
     output_file.write_all(&current_data)?;
 
     Ok(output_path.to_string_lossy().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_new_key_path() {
+        let test_name = format!("test_key_{}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let path_str = generate_new_key(&test_name).unwrap();
+        let path = PathBuf::from(&path_str);
+        
+        assert!(path.to_string_lossy().contains(".config/age/keys/"));
+        assert!(path.exists());
+
+        // Cleanup generated test key
+        let _ = std::fs::remove_file(&path);
+    }
 }
